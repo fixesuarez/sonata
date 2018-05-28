@@ -20,6 +20,9 @@ import time
 from neopixel import *
 import argparse
 
+from threading import Thread
+millis = lambda: int(round(time.time() * 1000))
+
 
 # LED strip configuration:
 LED_COUNT      = 15      # Number of LED pixels.
@@ -49,9 +52,10 @@ def wheel(pos):
         return Color(0, pos * 3, 255 - pos * 3)
     
 
-def colorWipe(strip, color, wait_ms=50):
+def colorWipe(strip, color, wait_ms=50, inverse=False):
     """Wipe color across display a pixel at a time."""
-    for i in range(strip.numPixels()):
+    tab=range(strip.numPixels(), -1, -1) if inverse else range(strip.numPixels())
+    for i in tab:
         strip.setPixelColor(i, color)
         strip.show()
         time.sleep(wait_ms/1000.0)
@@ -69,6 +73,7 @@ class SoundRecorder:
        
         
         colorWipe(npx, Color(255, 0, 0))
+        colorWipe(npx, Color(0, 0, 0), 50, True)
 
         p=pyaudio.PyAudio()
         print("scanning input devices ...")
@@ -247,7 +252,7 @@ class NoteTrainer(object):
         auto_scale = False
         toggle = False
         stepchange = False
-        soundgate = 19                            # zero is loudest possible input level
+        soundgate = 17.5                            # zero is loudest possible input level
         targetnote=0
         print("initiating sound recorder ...");
         SR=SoundRecorder()                          # recording device (usb mic)
@@ -326,41 +331,74 @@ class NoteTrainer(object):
                 print("note & err", tunerNotes[frequencies[targetnote]], err)
 
 
+class FadeWorker(Thread):
+    
+    def __init__(self, listener, delay):
+        Thread.__init__(self)
+        self.delay=delay
+        self.listener=listener
+        
+    def run(self):
+        self.go=True
+        while self.go:
+          self.listener.fade();
+          time.sleep(self.delay/1000.)
+
+    def stop(self):
+        self.go=False
+
 
 class NoteListener:
     
     def __init__(self, npx, freq_start, freq_end):
         self.npx=npx;
         self.index=0;
+        self.offset=40;
+        
         self.a=freq_start
         self.b=freq_end
         self.wide=freq_end-freq_start;
+        self.lastUpdate=millis();
+        
+        self.brightness=255;
     
-                
+    
     def increment(self):
         self.index+=1
         if(self.index>=LED_COUNT):
             self.index=0
+        self.lastUpdate=millis()
             
     def note(self, freq):
         print(freq, self.a, self.b)
         if freq < self.b and freq>self.a:
-            ri=int((freq-self.a)/self.wide*255)
+            ri=int((freq-self.a)/self.wide*(255-self.offset)+self.offset)
             print(ri)
             self.npx.setPixelColor(self.index, wheel(ri) )
             self.npx.show()
             self.increment()
             
+    def fade(self):
+        if(self.lastUpdate+90<millis()):
+            if self.brightness>4:
+                self.brightness-=5
+        elif self.brightness<251:
+            self.brightness+=5
+            
+        npx.setBrightness(self.brightness)
+        npx.show()
+            
         
 if __name__ == '__main__':
     try:
+        nl=NoteListener(npx, 70, 695); # from 70 to 700Hz
+        nl_monitor=FadeWorker(nl, 50);
+        nl_monitor.start();
+        
         trainer=NoteTrainer()
-        trainer.addNoteListener(NoteListener(
-            npx,
-            70,
-            695
-        ))
+        trainer.addNoteListener(nl)
         trainer.main();
         
     except KeyboardInterrupt:
         colorWipe(npx, Color(0,0,0), 50)
+        nl_monitor.stop()
