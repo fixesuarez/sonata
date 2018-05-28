@@ -40,6 +40,8 @@ print("Setting up neopixels ...");
 npx = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 npx.begin();
 
+
+
 def wheel(pos):
     """Generate rainbow colors across 0-255 positions."""
     if pos < 85:
@@ -71,10 +73,6 @@ class SoundRecorder:
         self.newAudio=False
         
        
-        
-        colorWipe(npx, Color(255, 0, 0))
-        colorWipe(npx, Color(0, 0, 0), 50, True)
-
         p=pyaudio.PyAudio()
         print("scanning input devices ...")
 
@@ -224,7 +222,7 @@ class NoteTrainer(object):
         # Sort the keys and turn into a numpy array for logical indexing
         self.frequencies = numpy.array(sorted(self.tunerNotes.keys()))
         
-    def main(self):
+    def main(self, loader):
         print("initiating vars ...")
         stepsize = 5
 
@@ -257,6 +255,7 @@ class NoteTrainer(object):
         print("initiating sound recorder ...");
         SR=SoundRecorder()                          # recording device (usb mic)
         print("SR intiated", trys);
+        loader.stop();
         while True:
             SR.setup()
             raw_data_signal = SR.getAudio()
@@ -330,7 +329,39 @@ class NoteTrainer(object):
                 err = abs(frequencies[targetnote]-inputnote)
                 print("note & err", tunerNotes[frequencies[targetnote]], err)
 
+class Loading(Thread):
+    def __init__(self, npx):
+        Thread.__init__(self)
+        self.loading=True
+        self.rainbow=15;
+        self.i=0;
+        
+    def next(self):
+        if(self.rainbow<254):
+            self.rainbow+=1;
+        else:
+            self.rainbow=15;
+        
+        if(self.i<LED_COUNT):
+            self.i+=1;
+        else:
+            self.i=0;
+        
+        
+    def stop(self):
+        self.loading=False;
+            
+    def run(self):
+        npx.setBrightness(255);
+        while self.loading:
+            npx.setPixelColor(self.i, wheel(self.rainbow));
+            npx.show();
+            self.next();
+            time.sleep(0.007);
+        
 
+        print "program ready"
+        
 class FadeWorker(Thread):
     
     def __init__(self, listener, delay):
@@ -390,6 +421,10 @@ class NoteListener:
             
         
 if __name__ == '__main__':
+    loader=Loading(npx);
+    loader.start();
+    time.sleep(7); # un si beau loader faut quand meme lui laisser le temps de charger !
+    
     try:
         nl=NoteListener(npx, 70, 695); # from 70 to 700Hz
         nl_monitor=FadeWorker(nl, 50);
@@ -397,7 +432,7 @@ if __name__ == '__main__':
         
         trainer=NoteTrainer()
         trainer.addNoteListener(nl)
-        trainer.main();
+        trainer.main(loader);
         
     except KeyboardInterrupt:
         colorWipe(npx, Color(0,0,0), 50)
