@@ -1,6 +1,5 @@
 ## NoteTrainer - by Alan Smith ##
 
-
 import sys
 import random
 import math
@@ -13,8 +12,7 @@ from random import *
 import traceback
 import numpy
 from scipy.signal import blackmanharris, fftconvolve
-from numpy import argmax, sqrt, mean, diff, log
-from matplotlib.mlab import find
+from numpy import argmax, sqrt, mean, diff, log, nonzero, ravel
 
 import time
 from neopixel import *
@@ -40,7 +38,9 @@ print("Setting up neopixels ...");
 npx = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 npx.begin();
 
-
+def find(condition):
+    res, = nonzero(ravel(condition))
+    return res
 
 def wheel(pos):
     """Generate rainbow colors across 0-255 positions."""
@@ -117,7 +117,6 @@ def parabolic(f, x):
 # See https://github.com/endolith/waveform-analyzer/blob/master/frequency_estimator.py
 def freq_from_autocorr(raw_data_signal, fs):
     corr = fftconvolve(raw_data_signal, raw_data_signal[::-1], mode='full')
-    #print(len(corr))
     corr = corr[int(math.floor(len(corr)/2)):]
     d = diff(corr)
     start = find(d > 0)[0]
@@ -265,7 +264,6 @@ class NoteTrainer(object):
                 fr=freq_from_autocorr(raw_data_signal,SR.RATE);
                 inputnote = round(fr,2)
             except Exception as e:
-                #print(traceback.format_exc())
                 inputnote = 0
                 
             SR.close()
@@ -279,7 +277,7 @@ class NoteTrainer(object):
             if signal_level > soundgate:                                        #### basic noise gate to stop it guessing ambient noises
                 continue
 
-               #print("frequence: ", inputnote, "Hz");
+            #print("frequence: ", inputnote, "Hz");
             #print("tuner note ", tunerNotes[frequencies[targetnote]])
             #print("signal level", signal_level)
 
@@ -318,7 +316,7 @@ class NoteTrainer(object):
 
 
 
-                                         #### memory of position
+            #### memory of position
 
             ####### Draw Stuff on the screen #######
 
@@ -360,7 +358,7 @@ class Loading(Thread):
             time.sleep(0.007);
         
 
-        print "program ready"
+        print("program ready")
         
 class FadeWorker(Thread):
     
@@ -372,8 +370,8 @@ class FadeWorker(Thread):
     def run(self):
         self.go=True
         while self.go:
-          self.listener.fade();
-          time.sleep(self.delay/1000.)
+            self.listener.fade();
+            time.sleep(self.delay/1000.)
 
     def stop(self):
         self.go=False
@@ -382,16 +380,16 @@ class FadeWorker(Thread):
 class NoteListener:
     
     def __init__(self, npx, freq_start, freq_end):
-        self.npx=npx;
-        self.index=0;
-        self.offset=40;
+        self.npx=npx
+        self.index=0
+        self.offset=40
         
         self.a=freq_start
         self.b=freq_end
-        self.wide=freq_end-freq_start;
-        self.lastUpdate=millis();
+        self.wide=freq_end-freq_start
+        self.lastUpdate=millis()
         
-        self.brightness=255;
+        self.brightness=255
     
     
     def increment(self):
