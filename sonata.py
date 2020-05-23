@@ -15,7 +15,7 @@ from scipy.signal import blackmanharris, fftconvolve
 from numpy import argmax, sqrt, mean, diff, log, nonzero, ravel
 
 import time
-from neopixel import *
+from neopixel import Adafruit_NeoPixel
 import argparse
 
 from threading import Thread
