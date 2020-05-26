@@ -1,3 +1,6 @@
+from threading import Thread
+
+
 class FadeWorker(Thread):
     
     def __init__(self, listener, delay):
