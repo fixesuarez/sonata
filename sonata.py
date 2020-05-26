@@ -22,6 +22,7 @@ import argparse
 
 from utils import wheel
 from note_listener import NoteListener
+from fade_worker import FadeWorker
 
 from threading import Thread
 
@@ -351,26 +352,7 @@ class Loading(Thread):
 
         print("program ready")
         
-class FadeWorker(Thread):
-    
-    def __init__(self, listener, delay):
-        Thread.__init__(self)
-        self.delay=delay
-        self.listener=listener
-        
-    def run(self):
-        self.go=True
-        while self.go:
-            self.listener.fade();
-            time.sleep(self.delay/1000.)
 
-    def stop(self):
-        self.go=False
-
-
-
-            
-        
 if __name__ == '__main__':
     loader=Loading(npx);
     loader.start();
