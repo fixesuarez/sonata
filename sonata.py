@@ -20,10 +20,10 @@ from rpi_ws281x import Adafruit_NeoPixel
 
 import argparse
 
+from utils import wheel
 from note_listener import NoteListener
 
 from threading import Thread
-millis = lambda: int(round(time.time() * 1000))
 
 
 # LED strip configuration:
@@ -46,17 +46,6 @@ def find(condition):
     res, = nonzero(ravel(condition))
     return res
 
-def wheel(pos):
-    """Generate rainbow colors across 0-255 positions."""
-    if pos < 85:
-        return Color(pos * 3, 255 - pos * 3, 0)
-    elif pos < 170:
-        pos -= 85
-        return Color(255 - pos * 3, 0, pos * 3)
-    else:
-        pos -= 170
-        return Color(0, pos * 3, 255 - pos * 3)
-    
 
 def colorWipe(strip, color, wait_ms=50, inverse=False):
     """Wipe color across display a pixel at a time."""
