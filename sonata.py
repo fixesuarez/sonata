@@ -17,6 +17,7 @@ from numpy import argmax, sqrt, mean, diff, log
 
 import time
 from neopixel import *
+from rpi_ws281x import Adafruit_NeoPixel
 import argparse
 
 from threading import Thread
