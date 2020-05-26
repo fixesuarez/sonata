@@ -1,6 +1,7 @@
 import numpy
 from utils import closest_value_index, freq_from_autocorr, loudness
 from constants import NOTES
+from sound_recorder import SoundRecorder
 
 
 class NoteTrainer(object):
