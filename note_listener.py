@@ -1,3 +1,6 @@
+import time
+from utils import wheel
+
 class NoteListener:
 
     def __init__(self, npx, freq_start, freq_end):
@@ -11,13 +14,6 @@ class NoteListener:
         self.lastUpdate=millis()
         
         self.brightness=255
-
-
-    def increment(self):
-        self.index+=1
-        if(self.index>=LED_COUNT):
-            self.index=0
-        self.lastUpdate=millis()
         
             
     def note(self, freq):
@@ -30,8 +26,15 @@ class NoteListener:
             self.increment()
 
 
+    def increment(self):
+        self.index+=1
+        if(self.index>=LED_COUNT):
+            self.index=0
+        self.lastUpdate=millis()
+
+
     def fade(self):
-        if(self.lastUpdate+90<millis()):
+        if(self.lastUpdate + 90 < millis()):
             if self.brightness>4:
                 self.brightness-=5
         elif self.brightness<251:
