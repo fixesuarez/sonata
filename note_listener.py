@@ -1,5 +1,6 @@
 
 from utils import wheel, millis
+from constants import LED_COUNT
 
 
 class NoteListener:
