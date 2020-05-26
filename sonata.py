@@ -326,7 +326,7 @@ class Loading(Thread):
             time.sleep(0.007);
         
 
-        print "program ready"
+        print("program ready")
         
 class FadeWorker(Thread):
     
