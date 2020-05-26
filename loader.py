@@ -1,5 +1,6 @@
 from threading import Thread
 from constants import LED_COUNT
+from utils import wheel
 
 
 class Loader(Thread):
@@ -31,6 +32,5 @@ class Loader(Thread):
             npx.show();
             self.next();
             time.sleep(0.007);
-        
 
         print("program ready")
