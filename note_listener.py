@@ -1,6 +1,7 @@
 
 from utils import wheel, millis
 
+
 class NoteListener:
 
     def __init__(self, npx, freq_start, freq_end):
