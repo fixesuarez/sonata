@@ -2,7 +2,6 @@
 
 import sys
 import random
-import math
 import os
 import pyaudio
 from scipy import signal

@@ -1,5 +1,6 @@
 import time
 import numpy
+import math
 from pygame import Color
 from scipy.signal import fftconvolve
 
