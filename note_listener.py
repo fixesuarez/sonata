@@ -6,14 +6,14 @@ from constants import LED_COUNT
 class NoteListener:
 
     def __init__(self, npx, freq_start, freq_end):
-        self.npx=npx
-        self.index=0
-        self.offset=40
+        self.npx = npx
+        self.index = 0
+        self.offset = 40
         
-        self.a=freq_start
-        self.b=freq_end
-        self.wide=freq_end-freq_start
-        self.lastUpdate=millis()
+        self.a = freq_start
+        self.b = freq_end
+        self.wide = freq_end-freq_start
+        self.lastUpdate = millis()
         
         self.brightness=255
         
@@ -42,5 +42,5 @@ class NoteListener:
         elif self.brightness<251:
             self.brightness+=5
             
-        npx.setBrightness(self.brightness)
-        npx.show()
+        self.npx.setBrightness(self.brightness)
+        self.npx.show()

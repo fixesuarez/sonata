@@ -1,5 +1,6 @@
 import numpy
 from utils import closest_value_index, freq_from_autocorr, loudness
+from constants import NOTES
 
 
 class NoteTrainer(object):
