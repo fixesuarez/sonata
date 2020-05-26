@@ -14,7 +14,6 @@ import traceback
 import numpy
 from scipy.signal import blackmanharris, fftconvolve
 from numpy import argmax, sqrt, mean, diff, log
-from matplotlib.mlab import find
 
 import time
 from neopixel import *
@@ -124,6 +123,10 @@ def freq_from_autocorr(raw_data_signal, fs):
     peak = argmax(corr[start:]) + start
     px, py = parabolic(corr, peak)
     return fs / px
+
+def find(condition):
+    res, = nonzero(ravel(condition))
+    return res
 
 def loudness(chunk):
     data = numpy.array(chunk, dtype=float) / 32768.0
