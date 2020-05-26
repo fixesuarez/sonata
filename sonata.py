@@ -15,7 +15,9 @@ from scipy.signal import blackmanharris, fftconvolve
 from numpy import argmax, sqrt, mean, diff, log, nonzero, ravel
 
 import time
-from neopixel import Adafruit_NeoPixel
+from neopixel import *
+from rpi_ws281x import Adafruit_NeoPixel
+
 import argparse
 
 from NoteListener import NoteListener
