@@ -1,5 +1,6 @@
 ## NoteTrainer - by Alan Smith ##
 
+
 import sys
 import random
 import math
@@ -12,10 +13,11 @@ from random import *
 import traceback
 import numpy
 from scipy.signal import blackmanharris, fftconvolve
-from numpy import argmax, sqrt, mean, diff, log, nonzero, ravel
+from numpy import argmax, sqrt, mean, diff, log
+from matplotlib.mlab import find
 
 import time
-from neopixel import Adafruit_NeoPixel
+from neopixel import *
 import argparse
 
 from threading import Thread
@@ -38,9 +40,7 @@ print("Setting up neopixels ...");
 npx = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 npx.begin();
 
-def find(condition):
-    res, = nonzero(ravel(condition))
-    return res
+
 
 def wheel(pos):
     """Generate rainbow colors across 0-255 positions."""
@@ -117,6 +117,7 @@ def parabolic(f, x):
 # See https://github.com/endolith/waveform-analyzer/blob/master/frequency_estimator.py
 def freq_from_autocorr(raw_data_signal, fs):
     corr = fftconvolve(raw_data_signal, raw_data_signal[::-1], mode='full')
+    #print(len(corr))
     corr = corr[int(math.floor(len(corr)/2)):]
     d = diff(corr)
     start = find(d > 0)[0]
@@ -213,6 +214,9 @@ class NoteTrainer(object):
     def addNoteListener(self, noteListener):
         self.noteListener=noteListener;
         
+    def addSoundLevelListener(self,sll):
+        self.sll=sll;
+        
     def __init__(self):
         self.noteListener=None    
         
@@ -241,14 +245,6 @@ class NoteTrainer(object):
         signal_level=0                              # volume level
         fill = True                                 #
         trys = 1
-        needle = False
-        cls = True
-        col = False
-        circ = False
-        line = False
-        auto_scale = False
-        toggle = False
-        stepchange = False
         soundgate = 17.5                            # zero is loudest possible input level
         targetnote=0
         print("initiating sound recorder ...");
@@ -256,76 +252,48 @@ class NoteTrainer(object):
         print("SR intiated", trys);
         loader.stop();
         while True:
-            SR.setup()
-            raw_data_signal = SR.getAudio()
-            signal_level = round(abs(loudness(raw_data_signal)),2)                  #### find the volume from the audio sample
-          
             try:
-                fr=freq_from_autocorr(raw_data_signal,SR.RATE);
-                inputnote = round(fr,2)
+                SR.setup()
+                raw_data_signal = SR.getAudio()
+                signal_level = round(abs(loudness(raw_data_signal)),2)                  #### find the volume from the audio sample
+              
+                try:
+                    fr=freq_from_autocorr(raw_data_signal,SR.RATE);
+                    inputnote = round(fr,2)
+                except Exception as e:
+                    #print(traceback.format_exc())
+                    inputnote = 0
+                    
+                SR.close()
+
+                if inputnote > frequencies[len(tunerNotes)-1]:                        #### not interested in notes above the notes list
+                    continue
+
+                if inputnote < frequencies[0]:                                     #### not interested in notes below the notes list
+                    continue
+
+                if signal_level > soundgate:
+                    '''if self.sll != None:
+                        self.sll.update(signal_level, None)      '''               #### basic noise gate to stop it guessing ambient noises
+                    continue
+
+                #print("frequence: ", inputnote, "Hz");
+                #print("tuner note ", tunerNotes[frequencies[targetnote]])
+                #print("signal level", signal_level)
+
+                targetnote = closest_value_index(frequencies, round(inputnote, 2))
+                
+                ##### use the controls to make changes to the data #####
+                print("level, freq, tuner_note, target_note", signal_level, str(inputnote)+"Hz", tunerNotes[frequencies[targetnote]], targetnote);
+                if self.noteListener!=None:
+                    self.noteListener.note(inputnote)
+                
+                '''if self.sll != None:
+                    self.sll.update(signal_level, inputnote)'''
+ 
             except Exception as e:
-                inputnote = 0
+                print(traceback.format_exc())
                 
-            SR.close()
-
-            if inputnote > frequencies[len(tunerNotes)-1]:                        #### not interested in notes above the notes list
-                continue
-
-            if inputnote < frequencies[0]:                                     #### not interested in notes below the notes list
-                continue
-
-            if signal_level > soundgate:                                        #### basic noise gate to stop it guessing ambient noises
-                continue
-
-            #print("frequence: ", inputnote, "Hz");
-            #print("tuner note ", tunerNotes[frequencies[targetnote]])
-            #print("signal level", signal_level)
-
-            targetnote = closest_value_index(frequencies, round(inputnote, 2))
-            
-            ##### use the controls to make changes to the data #####
-            print("level, freq, tuner_note, target_note", signal_level, str(inputnote)+"Hz", tunerNotes[frequencies[targetnote]], targetnote);
-            if self.noteListener!=None:
-                self.noteListener.note(inputnote)
-                
-            if stepchange == True:                     #go to start of the loop if the step size is altered
-                stepchange = not stepchange
-                break
-
-            if auto_scale:
-                if bot_note < 55 and bot_note < top_note + 6:
-                    bot_note = targetnote - 6
-                if top_note > 5 and top_note > bot_note + 6:
-                    top_note = targetnote  + 6
-                auto_scale = False
-
-            if col:
-                err = abs(frequencies[targetnote]-inputnote)
-                if err < 1.0:
-                    stepsizecolor = (0,255,0)
-                if err >= 1.0 and err <=2.5:
-                    stepsizecolor = (255,255,255)
-                if err > 2.5:
-                    stepsizecolor = (255,0,0)
-
-            if circ:
-                print('circ: ', abs(int(20-signal_level)*3))
-
-            if needle:
-                print('needle', inputnote)
-
-
-
-            #### memory of position
-
-            ####### Draw Stuff on the screen #######
-
-
-            # display note names if selected
-            if shownotes:
-                print("signal_level", signal_level)
-                err = abs(frequencies[targetnote]-inputnote)
-                print("note & err", tunerNotes[frequencies[targetnote]], err)
 
 class Loading(Thread):
     def __init__(self, npx):
@@ -358,7 +326,7 @@ class Loading(Thread):
             time.sleep(0.007);
         
 
-        print("program ready")
+        print "program ready"
         
 class FadeWorker(Thread):
     
@@ -370,8 +338,8 @@ class FadeWorker(Thread):
     def run(self):
         self.go=True
         while self.go:
-            self.listener.fade();
-            time.sleep(self.delay/1000.)
+          self.listener.fade();
+          time.sleep(self.delay/1000.)
 
     def stop(self):
         self.go=False
@@ -380,16 +348,16 @@ class FadeWorker(Thread):
 class NoteListener:
     
     def __init__(self, npx, freq_start, freq_end):
-        self.npx=npx
-        self.index=0
-        self.offset=40
+        self.npx=npx;
+        self.index=0;
+        self.offset=0;
         
         self.a=freq_start
         self.b=freq_end
-        self.wide=freq_end-freq_start
-        self.lastUpdate=millis()
+        self.wide=freq_end-freq_start;
+        self.lastUpdate=millis();
         
-        self.brightness=255
+        self.brightness=255;
     
     
     def increment(self):
@@ -402,7 +370,7 @@ class NoteListener:
         print(freq, self.a, self.b)
         if freq < self.b and freq>self.a:
             ri=int((freq-self.a)/self.wide*(255-self.offset)+self.offset)
-            print(ri)
+            #print(ri)
             self.npx.setPixelColor(self.index, wheel(ri) )
             self.npx.show()
             self.increment()
@@ -416,20 +384,93 @@ class NoteListener:
             
         npx.setBrightness(self.brightness)
         npx.show()
+  
+'''
+class SoundLevelListener:
+    
+    def __init__(self, gpio_pin, nb_leds, freq_start, freq_end, soundgate):
+        self.npx = Adafruit_NeoPixel(nb_leds, gpio_pin, LED_FREQ_HZ, 10, False, 255, 0)
+        self.npx.begin();
+        colorWipe(self.npx, Color(255, 0, 0));        
+        self.index=0;
+        self.last_update=0; # last update in ms
+        self.offset=40;
+        self.lvl_coeff=255./(soundgate);
+        self.a=freq_start
+        self.b=freq_end
+        self.wide=freq_end-freq_start;
+        self.lastUpdate=millis();
+        self.brightness=0;
+        self.color=wheel(255);
+        self.last_level=0;
+        self.nb_leds=nb_leds;
+        print("Sound level listener initiated");
             
+    def update(self, level, freq):
+        print("sll updated : ", level, freq);
+        m=millis();
+        (dt, self.last_update)=(m-self.last_update, m);
+        print "dt: "+str(dt)+"ms"
+        
+        
+        if freq != None:
+            if freq < self.b and freq>self.a:
+                tmp_color=wheel(int((freq-self.a)/self.wide*(255-self.offset)+self.offset))
+                
+            diff_color=tmp_color-self.color;
+            self.color+=int(diff_color/dt);
+            
+        diff_level=self.last_level-level;    
+        self.last_level=level;
+        print("dl", diff_level, self.lvl_coeff);    
+        self.brightness+=int((diff_level/dt*100)*self.lvl_coeff);
+        
+        if self.brightness<0:
+            self.brightness=0
+            
+        if self.brightness>255:
+            self.brightness=255;
+            
+        if self.color>255:
+            self.color=255;
+            
+        if self.color<20:
+            self.color=20
+        
+        for i in range(0, self.nb_leds):
+            self.npx.setPixelColor(i, self.color)
+             
+        
+        print("set ", self.brightness, self.color);
+        self.npx.setBrightness(self.brightness)
+        self.npx.show(); 
+        
+    def fade(self):
+        if(self.lastUpdate+90<millis()):
+            if self.brightness>4:
+                self.brightness-=5
+        elif self.brightness<251:
+            self.brightness+=5
+            
+        npx.setBrightness(self.brightness)
+        npx.show()'''
+               
         
 if __name__ == '__main__':
     loader=Loading(npx);
     loader.start();
-    time.sleep(7); # un si beau loader faut quand meme lui laisser le temps de charger !
+    time.sleep(5); # un si beau loader faut quand meme lui laisser le temps de charger !
     
     try:
-        nl=NoteListener(npx, 70, 695); # from 70 to 700Hz
+        nl=NoteListener(npx, 80, 710); # from 70 to 700Hz
         nl_monitor=FadeWorker(nl, 50);
         nl_monitor.start();
         
+        #sll=SoundLevelListener(12, 7, 70, 700, 18); 
+        
         trainer=NoteTrainer()
         trainer.addNoteListener(nl)
+        #trainer.addSoundLevelListener(sll);
         trainer.main(loader);
         
     except KeyboardInterrupt:
