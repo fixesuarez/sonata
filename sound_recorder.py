@@ -1,4 +1,5 @@
 import pyaudio
+import numpy
 
 
 # See http://www.swharden.com/blog/2013-05-09-realtime-fft-audio-visualization-with-python/
